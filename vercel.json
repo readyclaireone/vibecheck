@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/api/vibe/route.ts": {
+      "maxDuration": 180
+    }
+  }
+}
