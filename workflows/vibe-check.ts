@@ -172,9 +172,9 @@ function buildVibeCardHTML(vibeData: VibeData, inputText: string): string {
       <span class="score-num">${vibeData.score}/10</span>
     </div>
     <div class="haiku">
-      ${vibeData.haiku[0]}<br>
-      ${vibeData.haiku[1]}<br>
-      ${vibeData.haiku[2]}
+      ${vibeData.haiku.line1}<br>
+      ${vibeData.haiku.line2}<br>
+      ${vibeData.haiku.line3}
     </div>
   </div>
   <div class="bottom">
