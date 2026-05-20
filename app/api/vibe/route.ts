@@ -1,7 +1,7 @@
 import { vibeCheckWorkflow } from '@/workflows/vibe-check'
 
-// Allow up to 3 minutes — Sandbox puppeteer install takes ~60s on cold start
-export const maxDuration = 180
+// Sandbox write/read is fast — 30s is plenty
+export const maxDuration = 60
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null)
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     const result = await vibeCheckWorkflow(text)
     return Response.json({
       vibeData: result.vibeData,
-      screenshot: result.screenshotBase64,
+      html: result.html,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

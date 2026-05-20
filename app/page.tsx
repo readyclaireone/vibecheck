@@ -7,7 +7,7 @@ import type { VibeData } from '@/workflows/vibe-check'
 
 type VibeResult = {
   vibeData: VibeData
-  screenshot: string
+  html: string
 }
 
 const LOADING_MESSAGES = [
@@ -146,20 +146,19 @@ export default function Home() {
       {/* Result */}
       {result && !loading && (
         <div ref={resultRef} className="mt-12 w-full max-w-2xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          {/* Vibe card image */}
+          {/* Vibe card — rendered in an iframe from the Sandbox HTML */}
           <div
-            className="rounded-2xl overflow-hidden shadow-2xl ring-1"
+            className="rounded-2xl overflow-hidden shadow-2xl"
             style={{
+              aspectRatio: '640 / 400',
               boxShadow: `0 0 60px ${vibeColor}40, 0 0 120px ${vibeColor}20`,
-              
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`data:image/png;base64,${result.screenshot}`}
-              alt={`Vibe card: ${result.vibeData.mood}`}
-              className="w-full h-auto block"
-              style={{ imageRendering: 'auto' }}
+            <iframe
+              srcDoc={result.html}
+              title={`Vibe card: ${result.vibeData.mood}`}
+              className="w-full h-full border-0 block"
+              scrolling="no"
             />
           </div>
 

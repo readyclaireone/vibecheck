@@ -1,15 +1,22 @@
 import { generateObject } from 'ai'
 import { createOpenAI } from '@ai-sdk/openai'
-
-const gateway = createOpenAI({ baseURL: process.env.AI_GATEWAY_URL ?? 'https://ai-gateway.vercel.sh/v1', apiKey: process.env.AI_GATEWAY_API_KEY ?? '' })
 import { z } from 'zod'
 import { Sandbox } from '@vercel/sandbox'
+
+const gateway = createOpenAI({
+  baseURL: process.env.AI_GATEWAY_URL ?? 'https://ai-gateway.vercel.sh/v1',
+  apiKey: process.env.AI_GATEWAY_API_KEY ?? '',
+})
 
 export const VibeSchema = z.object({
   mood: z.string().describe('A single evocative word capturing the emotional vibe'),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).describe('A hex color that captures this vibe'),
   score: z.number().min(1).max(10).describe('Vibe score from 1 (dread) to 10 (pure euphoria)'),
-  haiku: z.object({ line1: z.string(), line2: z.string(), line3: z.string() }).describe('Three haiku lines inspired by this vibe'),
+  haiku: z.object({
+    line1: z.string(),
+    line2: z.string(),
+    line3: z.string(),
+  }).describe('Three haiku lines inspired by this vibe'),
   theme_song: z.string().describe('Artist - Song Title that matches this vibe'),
 })
 
@@ -17,8 +24,10 @@ export type VibeData = z.infer<typeof VibeSchema>
 
 export interface VibeCheckResult {
   vibeData: VibeData
-  screenshotBase64: string
+  html: string
 }
+
+// ─── helpers ────────────────────────────────────────────────────────────────
 
 function isLightColor(hex: string): boolean {
   const r = parseInt(hex.slice(1, 3), 16)
@@ -35,34 +44,45 @@ function adjustColor(hex: string, amount: number): string {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 function buildVibeCardHTML(vibeData: VibeData, inputText: string): string {
   const light = isLightColor(vibeData.color)
   const textColor = light ? '#1a1a2e' : '#ffffff'
   const subColor = light ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.55)'
   const barTrack = light ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.2)'
   const barFill = light ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.8)'
-  const accent = adjustColor(vibeData.color, light ? -60 : 60)
   const gradientEnd = adjustColor(vibeData.color, light ? -30 : -50)
 
-  const truncatedInput = inputText.length > 70
-    ? inputText.slice(0, 70) + '…'
-    : inputText
+  const truncatedInput = escapeHtml(
+    inputText.length > 70 ? inputText.slice(0, 70) + '…' : inputText
+  )
 
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+  }
   body {
-    width: 640px;
-    height: 400px;
-    overflow: hidden;
     background: linear-gradient(135deg, ${vibeData.color} 0%, ${gradientEnd} 100%);
     font-family: 'Inter', -apple-system, sans-serif;
     color: ${textColor};
     position: relative;
+    overflow: hidden;
   }
   .noise {
     position: absolute;
@@ -73,31 +93,31 @@ function buildVibeCardHTML(vibeData: VibeData, inputText: string): string {
   }
   .card {
     position: relative;
-    padding: 36px 44px;
+    padding: 5% 7%;
     height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
   }
-  .top { display: flex; flex-direction: column; gap: 4px; }
+  .top { display: flex; flex-direction: column; gap: 0.3em; }
   .label {
-    font-size: 11px;
+    font-size: clamp(9px, 1.5vw, 11px);
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: ${subColor};
   }
   .input-text {
-    font-size: 14px;
+    font-size: clamp(11px, 2vw, 14px);
     color: ${subColor};
     font-style: italic;
-    max-width: 460px;
+    max-width: 80%;
   }
-  .middle { display: flex; flex-direction: column; gap: 10px; }
+  .middle { display: flex; flex-direction: column; gap: 0.6em; }
   .mood {
-    font-size: 56px;
+    font-size: clamp(32px, 9vw, 56px);
     font-weight: 900;
-    letter-spacing: -3px;
+    letter-spacing: -0.05em;
     line-height: 1;
     text-transform: uppercase;
     color: ${textColor};
@@ -105,11 +125,11 @@ function buildVibeCardHTML(vibeData: VibeData, inputText: string): string {
   .score-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
   }
   .score-bar-wrap {
     flex: 1;
-    height: 6px;
+    height: 5px;
     background: ${barTrack};
     border-radius: 999px;
     overflow: hidden;
@@ -121,13 +141,13 @@ function buildVibeCardHTML(vibeData: VibeData, inputText: string): string {
     width: ${vibeData.score * 10}%;
   }
   .score-num {
-    font-size: 13px;
+    font-size: clamp(10px, 1.8vw, 13px);
     font-weight: 700;
     color: ${subColor};
     white-space: nowrap;
   }
   .haiku {
-    font-size: 16px;
+    font-size: clamp(12px, 2.5vw, 16px);
     line-height: 1.9;
     font-style: italic;
     color: ${textColor};
@@ -139,19 +159,18 @@ function buildVibeCardHTML(vibeData: VibeData, inputText: string): string {
     justify-content: space-between;
   }
   .song {
-    font-size: 13px;
+    font-size: clamp(10px, 2vw, 13px);
     color: ${subColor};
     display: flex;
     align-items: center;
     gap: 6px;
   }
-  .song-icon { font-size: 14px; }
   .badge {
-    font-size: 10px;
+    font-size: clamp(8px, 1.4vw, 10px);
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    padding: 4px 10px;
+    padding: 3px 9px;
     border-radius: 999px;
     background: ${barTrack};
     color: ${subColor};
@@ -166,21 +185,21 @@ function buildVibeCardHTML(vibeData: VibeData, inputText: string): string {
     <span class="input-text">"${truncatedInput}"</span>
   </div>
   <div class="middle">
-    <div class="mood">${vibeData.mood}</div>
+    <div class="mood">${escapeHtml(vibeData.mood)}</div>
     <div class="score-row">
       <div class="score-bar-wrap"><div class="score-bar-fill"></div></div>
       <span class="score-num">${vibeData.score}/10</span>
     </div>
     <div class="haiku">
-      ${vibeData.haiku.line1}<br>
-      ${vibeData.haiku.line2}<br>
-      ${vibeData.haiku.line3}
+      ${escapeHtml(vibeData.haiku.line1)}<br>
+      ${escapeHtml(vibeData.haiku.line2)}<br>
+      ${escapeHtml(vibeData.haiku.line3)}
     </div>
   </div>
   <div class="bottom">
     <div class="song">
-      <span class="song-icon">♫</span>
-      <span>${vibeData.theme_song}</span>
+      <span>♫</span>
+      <span>${escapeHtml(vibeData.theme_song)}</span>
     </div>
     <span class="badge">✦ ${vibeData.color}</span>
   </div>
@@ -189,34 +208,8 @@ function buildVibeCardHTML(vibeData: VibeData, inputText: string): string {
 </html>`
 }
 
-const SCREENSHOT_SCRIPT = `
-import puppeteer from 'puppeteer'
-import fs from 'fs'
+// ─── Step 1 — analyze the vibe with AI ──────────────────────────────────────
 
-const html = fs.readFileSync('/vercel/sandbox/vibe.html', 'utf8')
-
-const browser = await puppeteer.launch({
-  headless: true,
-  args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--disable-gpu',
-    '--window-size=640,400',
-  ],
-})
-
-const page = await browser.newPage()
-await page.setViewport({ width: 640, height: 400, deviceScaleFactor: 2 })
-await page.setContent(html, { waitUntil: 'domcontentloaded' })
-// small delay for font rendering
-await new Promise(r => setTimeout(r, 500))
-await page.screenshot({ path: '/vercel/sandbox/output.png', type: 'png', clip: { x: 0, y: 0, width: 640, height: 400 } })
-await browser.close()
-process.exit(0)
-`
-
-// Step 1 — analyze the vibe with AI
 async function analyzeVibe(text: string): Promise<VibeData> {
   'use step'
 
@@ -238,75 +231,35 @@ Rules:
   return object
 }
 
-// Step 2 — spin up a Vercel Sandbox, render the card HTML, and screenshot it
+// ─── Step 2 — render the vibe card HTML inside a Vercel Sandbox ─────────────
+// The sandbox writes the HTML to its filesystem and returns the string.
+// No screenshot / browser needed — the frontend renders it in an iframe.
+
 async function renderVibeCard(vibeData: VibeData, inputText: string): Promise<string> {
   'use step'
 
   const html = buildVibeCardHTML(vibeData, inputText)
 
-  const sandbox = await Sandbox.create({
-    runtime: 'node24',
-    timeout: 180_000,
-  })
-
+  const sandbox = await Sandbox.create({ runtime: 'node24', timeout: 30_000 })
   try {
     await sandbox.writeFiles([
-      {
-        path: '/vercel/sandbox/vibe.html',
-        content: html,
-      },
-      {
-        path: '/vercel/sandbox/package.json',
-        content: JSON.stringify({ type: 'module', dependencies: { puppeteer: '^22.0.0' } }),
-      },
-      {
-        path: '/vercel/sandbox/screenshot.mjs',
-        content: SCREENSHOT_SCRIPT,
-      },
+      { path: '/vercel/sandbox/vibe.html', content: html },
     ])
 
-    // Install puppeteer (downloads Chromium ~170 MB — takes ~60s first run)
-    const install = await sandbox.runCommand({
-      cmd: 'npm',
-      args: ['install', '--prefer-offline'],
-      cwd: '/vercel/sandbox',
-    })
-
-    if (install.exitCode !== 0) {
-      const stderr = await install.stderr()
-      throw new Error(`npm install failed: ${stderr}`)
-    }
-
-    // Take the screenshot
-    const screenshot = await sandbox.runCommand({
-      cmd: 'node',
-      args: ['screenshot.mjs'],
-      cwd: '/vercel/sandbox',
-    })
-
-    if (screenshot.exitCode !== 0) {
-      const stderr = await screenshot.stderr()
-      throw new Error(`Screenshot failed: ${stderr}`)
-    }
-
-    const pngBuffer = await sandbox.readFileToBuffer({ path: '/vercel/sandbox/output.png' })
-
-    if (!pngBuffer) {
-      throw new Error('Screenshot file not found')
-    }
-
-    return pngBuffer.toString('base64')
+    const buf = await sandbox.readFileToBuffer({ path: '/vercel/sandbox/vibe.html' })
+    return buf?.toString('utf8') ?? html
   } finally {
     await sandbox.stop()
   }
 }
 
-// Main workflow — orchestrates the two steps
+// ─── Workflow ────────────────────────────────────────────────────────────────
+
 export async function vibeCheckWorkflow(text: string): Promise<VibeCheckResult> {
   'use workflow'
 
   const vibeData = await analyzeVibe(text)
-  const screenshotBase64 = await renderVibeCard(vibeData, text)
+  const html = await renderVibeCard(vibeData, text)
 
-  return { vibeData, screenshotBase64 }
+  return { vibeData, html }
 }
