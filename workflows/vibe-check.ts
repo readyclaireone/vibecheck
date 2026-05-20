@@ -9,7 +9,7 @@ export const VibeSchema = z.object({
   mood: z.string().describe('A single evocative word capturing the emotional vibe'),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).describe('A hex color that captures this vibe'),
   score: z.number().min(1).max(10).describe('Vibe score from 1 (dread) to 10 (pure euphoria)'),
-  haiku: z.tuple([z.string(), z.string(), z.string()]).describe('Three haiku lines inspired by this vibe'),
+  haiku: z.object({ line1: z.string(), line2: z.string(), line3: z.string() }).describe('Three haiku lines inspired by this vibe'),
   theme_song: z.string().describe('Artist - Song Title that matches this vibe'),
 })
 
