@@ -1,7 +1,3 @@
 {
-  "functions": {
-    "app/api/vibe/route.ts": {
-      "maxDuration": 180
-    }
-  }
+  "framework": "nextjs"
 }
