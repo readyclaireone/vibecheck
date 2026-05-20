@@ -151,7 +151,7 @@ export default function Home() {
             className="rounded-2xl overflow-hidden shadow-2xl ring-1"
             style={{
               boxShadow: `0 0 60px ${vibeColor}40, 0 0 120px ${vibeColor}20`,
-              ringColor: `${vibeColor}30`,
+              
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}

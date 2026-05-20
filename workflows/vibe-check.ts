@@ -1,4 +1,7 @@
 import { generateObject } from 'ai'
+import { createOpenAI } from '@ai-sdk/openai'
+
+const gateway = createOpenAI({ baseURL: process.env.AI_GATEWAY_URL ?? 'https://ai-gateway.vercel.sh/v1', apiKey: process.env.AI_GATEWAY_API_KEY ?? '' })
 import { z } from 'zod'
 import { Sandbox } from '@vercel/sandbox'
 
@@ -218,7 +221,7 @@ async function analyzeVibe(text: string): Promise<VibeData> {
   'use step'
 
   const { object } = await generateObject({
-    model: 'openai/gpt-5.5',
+    model: gateway('openai/gpt-4o-mini'),
     schema: VibeSchema,
     prompt: `You are a vibe analyst. Analyze the vibe of the following text and return a JSON.
 
