@@ -1,6 +1,6 @@
+import { start } from 'workflow/api'
 import { vibeCheckWorkflow } from '@/workflows/vibe-check'
 
-// Sandbox write/read is fast — 30s is plenty
 export const maxDuration = 60
 
 export async function POST(req: Request) {
@@ -13,7 +13,11 @@ export async function POST(req: Request) {
   const text = body.text.trim().slice(0, 500)
 
   try {
-    const result = await vibeCheckWorkflow(text)
+    // start() registers the run with Vercel Workflows and returns a Run handle.
+    // run.returnValue polls until the workflow completes and returns the result.
+    const run = await start(vibeCheckWorkflow, [text])
+    const result = await run.returnValue
+
     return Response.json({
       vibeData: result.vibeData,
       html: result.html,
